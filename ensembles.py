@@ -60,6 +60,34 @@ class NVE(object):
         self.iterate_sys()
         self.n_moves += self.moved
 
+class NVE_polar(object):
+    '''
+    Microcanonical ensemble of polar particles with fixed number, volume and
+    energy. System is static.
+    '''
+    def __init__(self, n, d, V, U_func):
+        '''
+        Initialise a system with n particles in d-dimensional space of
+        volume V. Also potential function U_func with parameters U_args.
+        '''
+        NVE.__init__(self, n, d, V, U_func)
+        self.v = utils.point_pick_cart(self.d, self.n)
+
+    def get_U(self):
+        i_update = np.where(self.U_update)[0]
+        for i in i_update:
+            r_sep_abs = np.abs(self.r[i] - self.r)
+            r_sep_abs = np.minimum(r_sep_abs, self.L - r_sep_abs)
+            r_sep_sq = utils.vector_mag_sq(r_sep_abs)
+            for i_2 in range(self.n):
+                if i_2 != i:
+                    theta = utils.vector_angle(self.v[i], self.r[i_2])
+                    self.U[i, i_2] = self.U_func(r_sep_sq[i_2], theta)
+                    theta = utils.vector_angle(self.v[i_2], self.r[i])
+                    self.U[i_2, i] = self.U_func(r_sep_sq[i_2], theta)
+            self.U_update[i_update] = False
+        return self.U.sum()
+
 class NVT(NVE):
     '''
     Canonical ensemble of particles with fixed number, volume and temperature.
