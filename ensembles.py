@@ -28,21 +28,22 @@ class NVE(object):
         self.n = len(self.r)
         self.inds = np.arange(self.n)
         self.U = np.zeros(2 * [self.n], dtype=np.float)
-        self.U_update = np.ones([self.n], dtype=np.bool)
+        self.r_changed = np.ones([self.n], dtype=np.bool)
         self.get_U()
 
     def get_V(self):
         return self.L ** self.d
 
     def get_U(self):
-        i_update = np.where(self.U_update)[0]
-        for i in i_update:
+        for i in np.where(self.r_changed)[0]:
             r_sep_abs = np.abs(self.r[i] - self.r)
             r_sep_abs = np.minimum(r_sep_abs, self.L - r_sep_abs)
             r_sep_sq = utils.vector_mag_sq(r_sep_abs)
+            # Potential of me due to everyone
             self.U[i, :][self.inds != i] = self.U_func(r_sep_sq[self.inds != i])
+            # Potential of everyone else due to me
             self.U[:, i] = self.U[i, :]
-        self.U_update[i_update] = False
+        self.r_changed[:] = False
         return self.U.sum()
 
     def iterate_sys(self):
@@ -84,7 +85,7 @@ class NVT(NVE):
         self.r[i] += dr
         self.r[i][self.r[i] > self.L/2.0] -= self.L
         self.r[i][self.r[i] < -self.L/2.0] += self.L
-        self.U_update[i] = True
+        self.r_changed[i] = True
 
     def perturb_r(self, i):
         '''
@@ -129,7 +130,7 @@ class NpT(NVT):
         dL_frac = dV_frac ** (1.0 / self.d)
         self.L *= dL_frac
         self.r *= dL_frac
-        self.U_update[:] = True
+        self.r_changed[:] = True
 
     def perturb_V(self):
         '''
@@ -226,26 +227,52 @@ class NVE_polar(NVE):
     energy. System is static.
     '''
     def __init__(self, n, d, V, U_func):
-        self.v = utils.point_pick_cart(d, n)
+        self.th = np.random.uniform(-np.pi, np.pi, self.n)
         NVE.__init__(self, n, d, V, U_func)
 
-    def get_U(self):
-        i_update = np.where(self.U_update)[0]
-        for i in i_update:
-            r_sep = self.r[i] - self.r
-            r_sep_abs = np.minimum(np.abs(r_sep), self.L - np.abs(r_sep_abs))
-            r_sep_sq = utils.vector_mag_sq(r_sep_abs)
-            for i_2 in range(self.n):
+    def init_arrs(self):
+        self.n = len(self.r)
+        self.inds = np.arange(self.n)
+        self.U = np.zeros(2 * [self.n], dtype=np.float)
+        self.r_changed = np.ones([self.n], dtype=np.bool)
+        self.th_changed = np.ones([self.n], dtype=np.bool)
+        self.get_U()
 
-                if i_2 != i:
-                    print self.r[i_2] - self.r[i], r_sep[i_2]
-                    theta = utils.vector_angle(self.v[i], r_sep[i_2])
-#                    theta = np.arccos(np.sum(self.v[i] * r_sep[i_2], -1))
-                    self.U[i, i_2] = self.U_func(r_sep_sq[i_2], theta)
-                    theta = utils.vector_angle(self.v[i_2], -r_sep[i_2])
-#                    theta = np.arccos(np.sum(self.v[i_2] * -r_sep[i_2], -1))
-                    self.U[i_2, i] = self.U_func(r_sep_sq[i_2], theta)
-            self.U_update[i_update] = False
+    def get_U(self):
+        # If position changed U(i, :) different and U(:, i) different
+        for i in np.where(self.r_changed)[0]:
+            # Vector from me to them
+            r_sep = self.r - self.r[i]
+            r_sep_abs = np.minimum(np.abs(r_sep), self.L - np.abs(r_sep))
+            r_sep_sq = utils.vector_mag_sq(r_sep_abs)
+
+            # Angle of vector pointing from me to them
+            theta_r_sep = np.arctan2(r_sep[:, 1], r_sep[:, 0])
+            my_dtheta = theta_r_sep[i] - self.th
+            self.U[i, :][self.inds != i] = self.U_func(r_sep_sq[self.inds != i], my_dtheta[self.inds != i])
+
+            # Angle of vector pointing from them to me is previous + pi
+            theta_r_sep += np.pi
+            their_dtheta = self.th[i] - theta_r_sep
+            self.U[:, i][self.inds != i] = self.U_func(r_sep_sq[self.inds != i], their_dtheta[self.inds != i])
+
+        # If direction changed, U(i, :) same but U(:, i) different
+        for i in np.where(self.th_changed)[0]:
+            # Vector from me to them
+            r_sep = self.r - self.r[i]
+            r_sep_abs = np.minimum(np.abs(r_sep), self.L - np.abs(r_sep))
+            r_sep_sq = utils.vector_mag_sq(r_sep_abs)
+
+            # Angle of vector pointing from me to them
+            theta_r_sep = np.arctan2(r_sep[:, 1], r_sep[:, 0])
+
+            # Angle of vector pointing from them to me is previous + pi
+            theta_r_sep += np.pi
+            their_dtheta = self.th[i] - theta_r_sep
+            self.U[:, i][self.inds != i] = self.U_func(r_sep_sq[self.inds != i], their_dtheta[self.inds != i])
+
+        self.th_changed[:] = False
+
         return self.U.sum()
 
 class NVT_polar(NVT, NVE_polar):
@@ -254,23 +281,17 @@ class NVT_polar(NVT, NVE_polar):
         NVT.__init__(self, n, d, V, U_func, T, dr_max)
         self.dth_max = dth_max
 
-    def displace_r(self, i, dr, dth):
-        self.r[i] += dr
-        self.r[i][self.r[i] > self.L/2.0] -= self.L
-        self.r[i][self.r[i] < -self.L/2.0] += self.L
-        v=self.v[i].copy()
-        self.v[i] = utils.rotate(self.v[i], dth)
-#        print utils.vector_angle(self.v[i],v), dth
-        self.U_update[i] = True
+    def displace_th(self, i, dth):
+        self.th[i] += dth
+        self.th_changed[i] = True
 
-    def perturb_r(self, i):
+    def perturb_th(self, i):
         U_0 = self.get_U()
-        dr = self.dr_max * utils.point_pick_cart(self.d)[0]
         dth = np.random.uniform(-self.dth_max, self.dth_max)
-        self.displace_r(i, dr, dth)
+        self.displace_th(i, dth)
         dU = self.get_U() - U_0
         P = np.exp(-self.beta * dU)
         if np.minimum(1.0, P) < np.random.uniform():
-            self.displace_r(i, -dr, -dth)
+            self.displace_th(i, -dth)
         else:
             self.moved = True
