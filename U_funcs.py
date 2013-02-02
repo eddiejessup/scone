@@ -16,26 +16,26 @@ def well(r_0, U_0):
         return np.where(r_sq < r_0 ** 2, -U_0, 0.0)
     return func
 
-def inv_sq(k):
+def inv_sq(r_0, k):
     '''
     Inverse-square law, U(r) = -k / r.
     '''
     def func(r_sq):
-        return -k / np.sqrt(r_sq)
+        return -k / (np.sqrt(r_sq) / r_0)
     return func
 
-def harm_osc(k):
+def harm_osc(r_0, k):
     '''
     Harmonic oscillator, U(r) = k * (r ** 2) / 2.0.
     '''
     def func(r_sq):
-        return 0.5 * k * r_sq
+        return 0.5 * k * (r_sq / r_0 ** 2)
     return func
 
-def harm_osc_anis(k):
+def inv_sq_anis(r_0, k):
     '''
     Harmonic oscillator, U(r) = k * (r ** 2) / 2.0.
     '''
     def func(r_sq, theta):
-        return (0.5 * k * r_sq) * np.cos(theta)
+        return (-k / (np.sqrt(r_sq) / r_0)) * (1.0 + np.cos(theta) ** 2)
     return func

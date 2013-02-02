@@ -6,19 +6,20 @@ import utils
 import ensembles
 import U_funcs
 
-every = 500
+every = 50
 random_seed = 100
 i_max = 400000
 
 # Potential parameters
 #U_func = U_funcs.well(r_0=0.05, U_0=-100000)
 #U_func = U_funcs.LJ(r_0=0.05, U_0=10.0)
-#U_func = U_funcs.inv_sq(k=-1.0)
-U_func = U_funcs.harm_osc_anis(k=01.0)
+#U_func = U_funcs.inv_sq(r_0=0.05, k=-10.0)
+#U_func = U_funcs.harm_osc(r_0=10.0, k=10.0)
+U_func = U_funcs.inv_sq_anis(r_0=0.05, k=-10.0)
 
 # NVE parameters
 d = 2
-n = 500
+n = 50
 V = 1.0
 
 # NVT parameters
@@ -26,7 +27,7 @@ T = 300.0
 dr_max = 1e-2
 
 # NPT parameters
-p = 100.0
+p = 1.0
 dV_max = 1e-1
 
 # MVT parameters
@@ -39,23 +40,26 @@ def main():
 #    system = ensembles.NVT(n, d, V, U_func, T, dr_max)
 #    system = ensembles.NpT(n, d, V, U_func, T, dr_max, p, dV_max)
 #    system = ensembles.MVT(n, d, V, U_func, T, dr_max, mu, n_exch)
-    system = ensembles.NVE_polar(n, d, V, U_func)
+#    system = ensembles.NVE_polar(n, d, V, U_func)
+    system = ensembles.NVT_polar(n, d, V, U_func, T, dr_max, 0.1)
 
     # Output
     f_output = open('outputn.dat', 'w')
     output = csv.writer(f_output, delimiter=' ')
     output.writerow(['i', 'U', 'dyn'])
     # Plotting
-    utils.makedirs_soft('p')
-    fig = pp.figure()
-    if system.d == 2:
-        ax = fig.add_subplot(111)
-        plot = ax.scatter([], [])
-    elif system.d == 3:
-        ax = fig.add_subplot(111, projection='3d')
-        plot = ax.scatter([], [], [])
-    ax.set_aspect('equal')
-    fig.show()
+#    utils.makedirs_soft('p')
+#    fig = pp.figure()
+#    if system.d == 2:
+#        ax = fig.add_subplot(111)
+#        plot = ax.scatter([], [])
+#    elif system.d == 3:
+#        ax = fig.add_subplot(111, projection='3d')
+#        plot = ax.scatter([], [], [])
+#    ax.set_aspect('equal')
+#    fig.show()
+    pp.show()
+    pp.ion()
 
     moves = [system.n_moves]
 
@@ -66,16 +70,21 @@ def main():
             moves.append(system.n_moves)
             output.writerow([system.i, system.get_U(), (moves[-1] - moves[-2]) / float(every)])
             f_output.flush()
-            # Plotting
-            if system.d == 2:
-                plot.set_offsets(system.r)
-            elif system.d == 3:
-                plot._offsets3d = (system.r[:, 0], system.r[:, 1], system.r[:, 2])
-                ax.set_zlim([-system.L/2.0, system.L/2.0])
-            ax.set_xlim([-system.L/2.0, system.L/2.0])
-            ax.set_ylim([-system.L/2.0, system.L/2.0])
-            fig.canvas.draw()
-            fig.savefig('p/%010i.png' % system.i)
+
+            pp.quiver(system.r[:, 0], system.r[:, 1], system.v[:, 0], system.v[:, 1])
+            pp.draw()
+            pp.cla()
+
+#            # Plotting
+#            if system.d == 2:
+#                plot.set_offsets(system.r)
+#            elif system.d == 3:
+#                plot._offsets3d = (system.r[:, 0], system.r[:, 1], system.r[:, 2])
+#                ax.set_zlim([-system.L/2.0, system.L/2.0])
+#            ax.set_xlim([-system.L/2.0, system.L/2.0])
+#            ax.set_ylim([-system.L/2.0, system.L/2.0])
+#            fig.canvas.draw()
+#            fig.savefig('p/%010i.png' % system.i)
         system.iterate()
 
 

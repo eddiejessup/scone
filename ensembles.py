@@ -60,34 +60,6 @@ class NVE(object):
         self.iterate_sys()
         self.n_moves += self.moved
 
-class NVE_polar(object):
-    '''
-    Microcanonical ensemble of polar particles with fixed number, volume and
-    energy. System is static.
-    '''
-    def __init__(self, n, d, V, U_func):
-        '''
-        Initialise a system with n particles in d-dimensional space of
-        volume V. Also potential function U_func with parameters U_args.
-        '''
-        NVE.__init__(self, n, d, V, U_func)
-        self.v = utils.point_pick_cart(self.d, self.n)
-
-    def get_U(self):
-        i_update = np.where(self.U_update)[0]
-        for i in i_update:
-            r_sep_abs = np.abs(self.r[i] - self.r)
-            r_sep_abs = np.minimum(r_sep_abs, self.L - r_sep_abs)
-            r_sep_sq = utils.vector_mag_sq(r_sep_abs)
-            for i_2 in range(self.n):
-                if i_2 != i:
-                    theta = utils.vector_angle(self.v[i], self.r[i_2])
-                    self.U[i, i_2] = self.U_func(r_sep_sq[i_2], theta)
-                    theta = utils.vector_angle(self.v[i_2], self.r[i])
-                    self.U[i_2, i] = self.U_func(r_sep_sq[i_2], theta)
-            self.U_update[i_update] = False
-        return self.U.sum()
-
 class NVT(NVE):
     '''
     Canonical ensemble of particles with fixed number, volume and temperature.
@@ -245,5 +217,60 @@ class MVT(NVT):
         if np.minimum(1.0, P) < np.random.uniform():
             self.r = np.append(self.r, [r_del], 0)
             self.init_arrs()
+        else:
+            self.moved = True
+
+class NVE_polar(NVE):
+    '''
+    Microcanonical ensemble of polar particles with fixed number, volume and
+    energy. System is static.
+    '''
+    def __init__(self, n, d, V, U_func):
+        self.v = utils.point_pick_cart(d, n)
+        NVE.__init__(self, n, d, V, U_func)
+
+    def get_U(self):
+        i_update = np.where(self.U_update)[0]
+        for i in i_update:
+            r_sep = self.r[i] - self.r
+            r_sep_abs = np.minimum(np.abs(r_sep), self.L - np.abs(r_sep_abs))
+            r_sep_sq = utils.vector_mag_sq(r_sep_abs)
+            for i_2 in range(self.n):
+
+                if i_2 != i:
+                    print self.r[i_2] - self.r[i], r_sep[i_2]
+                    theta = utils.vector_angle(self.v[i], r_sep[i_2])
+#                    theta = np.arccos(np.sum(self.v[i] * r_sep[i_2], -1))
+                    self.U[i, i_2] = self.U_func(r_sep_sq[i_2], theta)
+                    theta = utils.vector_angle(self.v[i_2], -r_sep[i_2])
+#                    theta = np.arccos(np.sum(self.v[i_2] * -r_sep[i_2], -1))
+                    self.U[i_2, i] = self.U_func(r_sep_sq[i_2], theta)
+            self.U_update[i_update] = False
+        return self.U.sum()
+
+class NVT_polar(NVT, NVE_polar):
+    def __init__(self, n, d, V, U_func, T, dr_max, dth_max):
+        self.v = utils.point_pick_cart(d, n)
+        NVT.__init__(self, n, d, V, U_func, T, dr_max)
+        self.dth_max = dth_max
+
+    def displace_r(self, i, dr, dth):
+        self.r[i] += dr
+        self.r[i][self.r[i] > self.L/2.0] -= self.L
+        self.r[i][self.r[i] < -self.L/2.0] += self.L
+        v=self.v[i].copy()
+        self.v[i] = utils.rotate(self.v[i], dth)
+#        print utils.vector_angle(self.v[i],v), dth
+        self.U_update[i] = True
+
+    def perturb_r(self, i):
+        U_0 = self.get_U()
+        dr = self.dr_max * utils.point_pick_cart(self.d)[0]
+        dth = np.random.uniform(-self.dth_max, self.dth_max)
+        self.displace_r(i, dr, dth)
+        dU = self.get_U() - U_0
+        P = np.exp(-self.beta * dU)
+        if np.minimum(1.0, P) < np.random.uniform():
+            self.displace_r(i, -dr, -dth)
         else:
             self.moved = True
