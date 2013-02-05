@@ -4,49 +4,61 @@ from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import utils
 import ensembles
+import ensembles_polar
 import U_funcs
 
-every = 50
-random_seed = 100
+every = 200
+random_seed = 12
 i_max = 400000
 
-# Potential parameters
+args = {}
+# Potential
 #U_func = U_funcs.well(r_0=0.05, U_0=-100000)
-#U_func = U_funcs.LJ(r_0=0.05, U_0=10.0)
+args['U_func'] = U_funcs.LJ(r_0=0.05, U_0=1.0)
 #U_func = U_funcs.inv_sq(r_0=0.05, k=-10.0)
 #U_func = U_funcs.harm_osc(r_0=10.0, k=10.0)
-U_func = U_funcs.inv_sq_anis(r_0=0.05, k=-10.0)
+#U_func = U_funcs.inv_sq_anis(r_0=0.01, k=-10.0)
+args['U_func'] = U_funcs.anis_wrap(args['U_func'])
 
-# NVE parameters
-d = 2
-n = 50
-V = 1.0
+# NVE
+args['d'] = 2
+args['n'] = 400
+args['V'] = 1.0
 
-# NVT parameters
-T = 300.0
-dr_max = 1e-2
+# NVT
+args['T'] = 300
+args['dr_max'] = 5e-2
 
-# NPT parameters
-p = 1.0
-dV_max = 1e-1
+# NpT
+args['p'] = 10000.0
+args['dV_max'] = 1e-2
 
-# MVT parameters
-mu = 0.1
-n_exch = 5
+# MVT
+args['mu'] = 0.1
+args['n_exch'] = 5
+
+# Polar
+args['dth_max'] = 0.1
 
 def main():
     np.random.seed(random_seed)
-#    system = ensembles.NVE(n, d, V, U_func)
-#    system = ensembles.NVT(n, d, V, U_func, T, dr_max)
-#    system = ensembles.NpT(n, d, V, U_func, T, dr_max, p, dV_max)
-#    system = ensembles.MVT(n, d, V, U_func, T, dr_max, mu, n_exch)
-#    system = ensembles.NVE_polar(n, d, V, U_func)
-    system = ensembles.NVT_polar(n, d, V, U_func, T, dr_max, 0.1)
+#    system = ensembles.NVE(**args)
+#    system = ensembles.NVT(**args)
+#    system = ensembles.NpT(**args)
+#    system = ensembles.MVT(**args)
+
+#    system = ensembles_polar.NVE_polar(**args)
+#    system = ensembles_polar.NVT_polar(**args)
+    system = ensembles_polar.NpT_polar(**args)
+#    system = ensembles_polar.MVT_polar(**args)
+    pp.show()
+    pp.ion()
 
     # Output
-    f_output = open('outputn.dat', 'w')
-    output = csv.writer(f_output, delimiter=' ')
-    output.writerow(['i', 'U', 'dyn'])
+#    f_output = open('outputn.dat', 'w')
+#    output = csv.writer(f_output, delimiter=' ')
+#    output.writerow(['i', 'U', 'dyn'])
+
     # Plotting
 #    utils.makedirs_soft('p')
 #    fig = pp.figure()
@@ -58,24 +70,31 @@ def main():
 #        plot = ax.scatter([], [], [])
 #    ax.set_aspect('equal')
 #    fig.show()
-    pp.show()
-    pp.ion()
 
     moves = [system.n_moves]
 
     while system.i <= i_max:
         if not system.i % every:
-            # Output
-            print system.i, system.get_U()
-            moves.append(system.n_moves)
-            output.writerow([system.i, system.get_U(), (moves[-1] - moves[-2]) / float(every)])
-            f_output.flush()
 
-            pp.quiver(system.r[:, 0], system.r[:, 1], system.v[:, 0], system.v[:, 1])
+            pp.quiver(system.r[:, 0], system.r[:, 1], np.cos(system.th), np.sin(system.th), pivot='middle', headwidth=0)
+            pp.xlim([-system.L/2.0, system.L/2.0])
+            pp.ylim([-system.L/2.0, system.L/2.0])
+            pp.gca().set_aspect('equal')
             pp.draw()
             pp.cla()
 
-#            # Plotting
+            print system.i, system.get_U()
+
+            # Output
+#            moves.append(system.n_moves)
+#            output.writerow([system.i, system.get_U(), (moves[-1] - moves[-2]) / float(every)])
+#            f_output.flush()
+
+#            thetas = system.th.copy()
+#            thetas %= np.pi
+#            print np.std(thetas)
+
+            # Plotting
 #            if system.d == 2:
 #                plot.set_offsets(system.r)
 #            elif system.d == 3:
@@ -85,8 +104,8 @@ def main():
 #            ax.set_ylim([-system.L/2.0, system.L/2.0])
 #            fig.canvas.draw()
 #            fig.savefig('p/%010i.png' % system.i)
-        system.iterate()
 
+        system.iterate()
 
 if __name__ == '__main__':
     main()

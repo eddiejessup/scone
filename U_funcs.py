@@ -32,10 +32,10 @@ def harm_osc(r_0, k):
         return 0.5 * k * (r_sq / r_0 ** 2)
     return func
 
-def inv_sq_anis(r_0, k):
+def anis_wrap(func_iso):
     '''
-    Harmonic oscillator, U(r) = k * (r ** 2) / 2.0.
+    Wrap an isotropic potential in an anisotropic envelope
     '''
-    def func(r_sq, theta):
-        return (-k / (np.sqrt(r_sq) / r_0)) * (1.0 + np.cos(theta) ** 2)
-    return func
+    def func_anis(r_sq, theta):
+        return func_iso(r_sq) * (0.5 + np.cos(0.5*theta) ** 2)
+    return func_anis
