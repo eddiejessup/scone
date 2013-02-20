@@ -1,0 +1,3 @@
+Molecular dynamics simulation using the Metropolis-Hastings monte carlo method.
+
+It's not fast but it's reasonably flexible and fairly elegantly implemented programming-wise.
