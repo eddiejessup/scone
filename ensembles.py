@@ -98,7 +98,7 @@ class NVT(NVE):
         the move according to the Monte-Carlo acceptance test.
         '''
         U_0 = self.get_U()
-        dr = self.dr_max * self.L * utils.point_pick_cart(self.d)[0]
+        dr = self.dr_max * self.L * utils.sphere_pick(self.d)[0]
         self.displace_r(i, dr)
         dU = self.get_U() - U_0
         P = np.exp(-self.beta * dU)

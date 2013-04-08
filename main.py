@@ -1,11 +1,12 @@
+from __future__ import print_function
 import csv
 import matplotlib.pyplot as pp
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import utils
+import potentials
 import ensembles
 import ensembles_polar
-import U_funcs
 
 every = 200
 random_seed = 12
@@ -13,12 +14,8 @@ i_max = 400000
 
 args = {}
 # Potential
-#U_func = U_funcs.well(r_0=0.05, U_0=-100000)
-args['U_func'] = U_funcs.LJ(r_0=0.05, U_0=1.0)
-#U_func = U_funcs.inv_sq(r_0=0.05, k=-10.0)
-#U_func = U_funcs.harm_osc(r_0=10.0, k=10.0)
-#U_func = U_funcs.inv_sq_anis(r_0=0.01, k=-10.0)
-args['U_func'] = U_funcs.anis_wrap(args['U_func'])
+args['U_func'] = potentials.LJ(r_0=0.05, U_0=1.0)
+args['U_func'] = potentials.anis_wrap(args['U_func'])
 
 # NVE
 args['d'] = 2
@@ -55,55 +52,53 @@ def main():
     pp.ion()
 
     # Output
-#    f_output = open('outputn.dat', 'w')
-#    output = csv.writer(f_output, delimiter=' ')
-#    output.writerow(['i', 'U', 'dyn'])
+    f_output = open('Data/log.dat', 'w')
+    output = csv.writer(f_output, delimiter=' ')
+    output.writerow(['i', 'U', 'dyn'])
 
     # Plotting
-#    utils.makedirs_soft('p')
-#    fig = pp.figure()
-#    if system.d == 2:
-#        ax = fig.add_subplot(111)
-#        plot = ax.scatter([], [])
-#    elif system.d == 3:
-#        ax = fig.add_subplot(111, projection='3d')
-#        plot = ax.scatter([], [], [])
-#    ax.set_aspect('equal')
-#    fig.show()
+    utils.makedirs_soft('Data/p')
+    fig = pp.figure()
+    if system.d == 2:
+        ax = fig.add_subplot(111)
+        plot = ax.scatter([], [])
+    elif system.d == 3:
+        ax = fig.add_subplot(111, projection='3d')
+        plot = ax.scatter([], [], [])
+    ax.set_aspect('equal')
+    fig.show()
 
     moves = [system.n_moves]
 
     while system.i <= i_max:
         if not system.i % every:
 
-            pp.quiver(system.r[:, 0], system.r[:, 1], np.cos(system.th), np.sin(system.th), pivot='middle', headwidth=0)
-            pp.xlim([-system.L/2.0, system.L/2.0])
-            pp.ylim([-system.L/2.0, system.L/2.0])
-            pp.gca().set_aspect('equal')
-            pp.draw()
-            pp.cla()
-
-            print system.i, system.get_U()
+#            pp.quiver(system.r[:, 0], system.r[:, 1], np.cos(system.th), np.sin(system.th), pivot='middle', headwidth=0)
+#            pp.xlim([-system.L/2.0, system.L/2.0])
+#            pp.ylim([-system.L/2.0, system.L/2.0])
+#            pp.gca().set_aspect('equal')
+#            pp.draw()
+#            pp.cla()
 
             # Output
-#            moves.append(system.n_moves)
-#            output.writerow([system.i, system.get_U(), (moves[-1] - moves[-2]) / float(every)])
-#            f_output.flush()
+            moves.append(system.n_moves)
+            output.writerow([system.i, system.get_U(), (moves[-1] - moves[-2]) / float(every)])
+            f_output.flush()
 
 #            thetas = system.th.copy()
 #            thetas %= np.pi
 #            print np.std(thetas)
 
             # Plotting
-#            if system.d == 2:
-#                plot.set_offsets(system.r)
-#            elif system.d == 3:
-#                plot._offsets3d = (system.r[:, 0], system.r[:, 1], system.r[:, 2])
-#                ax.set_zlim([-system.L/2.0, system.L/2.0])
-#            ax.set_xlim([-system.L/2.0, system.L/2.0])
-#            ax.set_ylim([-system.L/2.0, system.L/2.0])
-#            fig.canvas.draw()
-#            fig.savefig('p/%010i.png' % system.i)
+            if system.d == 2:
+                plot.set_offsets(system.r)
+            elif system.d == 3:
+                plot._offsets3d = (system.r[:, 0], system.r[:, 1], system.r[:, 2])
+                ax.set_zlim([-system.L/2.0, system.L/2.0])
+            ax.set_xlim([-system.L/2.0, system.L/2.0])
+            ax.set_ylim([-system.L/2.0, system.L/2.0])
+            fig.canvas.draw()
+            fig.savefig('Data/p/%010i.png' % system.i)
 
         system.iterate()
 
