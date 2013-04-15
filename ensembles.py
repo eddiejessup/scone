@@ -9,19 +9,18 @@ class NVE(object):
     Microcanonical ensemble of particles with fixed number, volume and
     energy. System is static.
     '''
-    def __init__(self, n, d, V, U_func, **kwargs):
+    def __init__(self, d, U_func, r, V, **kwargs):
         '''
         Initialise a system with n particles in d-dimensional space of
         volume V. Also potential function U_func with parameters U_args.
         '''
-        self.n = n
         self.d = d
-        self.L = V ** (1.0 / self.d)
         self.U_func = U_func
-
         self.i = 0
         self.n_moves = 0
-        self.r = np.random.uniform(-self.L/2.0, self.L/2.0, (self.n, self.d))
+
+        self.r = r
+        self.L = V ** (1.0 / self.d)
         self.init_arrs()
 
     def init_arrs(self):

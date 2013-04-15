@@ -2,14 +2,14 @@ import numpy as np
 import utils
 import ensembles
 
-class NVE_polar(ensembles.NVE):
+class NVE(ensembles.NVE):
     '''
     Microcanonical ensemble of polar particles with fixed number, volume and
     energy. System is static.
     '''
-    def __init__(self, **kwargs):
+    def __init__(self, th, **kwargs):
         ensembles.NVE.__init__(self, **kwargs)
-        self.th = np.random.uniform(-np.pi, np.pi, self.n)
+        self.th = th
 
     def get_U(self):
         for i in np.where(self.U_changed)[0]:
@@ -22,14 +22,14 @@ class NVE_polar(ensembles.NVE):
         self.U_changed[:] = False
         return self.U.sum()
 
-class NVT_polar(ensembles.NVT, NVE_polar):
+class NVT(ensembles.NVT, NVE):
     def __init__(self, dth_max, **kwargs):
         self.dth_max = dth_max
         ensembles.NVT.__init__(self, **kwargs)
-        NVE_polar.__init__(self, **kwargs)
+        NVE.__init__(self, **kwargs)
 
     def perturb_micro(self, i):
-        if np.random.uniform() > 0.5:
+        if np.random.uniform() > 0.9:
             self.perturb_r(i)
         else:
             self.perturb_th(i)
@@ -49,15 +49,15 @@ class NVT_polar(ensembles.NVT, NVE_polar):
         else:
             self.moved = True
 
-class NpT_polar(ensembles.NpT, NVT_polar):
+class NpT(ensembles.NpT, NVT):
     def __init__(self, **kwargs):
         ensembles.NpT.__init__(self, **kwargs)
-        NVT_polar.__init__(self, **kwargs)
+        NVT.__init__(self, **kwargs)
 
-class MVT_polar(ensembles.MVT, NVT_polar):
+class MVT(ensembles.MVT, NVT):
     def __init__(self, **kwargs):
         ensembles.MVT.__init__(self, **kwargs)
-        NVT_polar.__init__(self, **kwargs)
+        NVT.__init__(self, **kwargs)
 
     def get_dat_new(self):
         return MVT.get_dat_new(self) + (np.random.uniform(np.pi, np.pi),)
